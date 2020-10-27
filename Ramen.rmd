@@ -1,0 +1,133 @@
+---
+title: "Ramen Around The World"
+author: "Ignatius Kevin"
+date: "10/27/2020"
+output: html_document
+number_sections: true
+theme: united
+highlight: espresso
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Halo, ini merupakan tugas Learning by Building yang bertujuan untuk membuat visualisasi dari data. Dataset diambil dari website https://www.kaggle.com/datasets. Analisis dibuat dengan program R dan menggunakan beberapa library tambahan seperti dplyr, ggplot2, patchwork, shiny, scales, glue, dan plotly. Analisis yang dibuat adalah Top 10 Country with Most Ramen Brand dan 5 Star Ramen Packaging Style.
+
+# Analysis Report
+
+## Call Library
+Memanggil library yang akan digunakan untuk membantu pembuatan analisis.
+```{r,error=FALSE, message=FALSE}
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+library(shiny)
+library(scales)
+library(glue)
+library(plotly)
+```
+
+## Call Data
+Memanggil dataset yang sudah didownload dari https://www.kaggle.com/datasets. Dataset ini berisikan Ramen dari seluruh dunia dilengkapi dengan ratingnya. Selain memanggil data, fungsi glimpse juga dilakukan untuk menampilkan struktur internal dari data ramen secara compact.
+```{r}
+ramen <- read.csv("data/ramen-ratings.csv")
+glimpse(ramen)
+```
+## Data Coercion
+Mengubah tipe data yang masih salah ke yang benar. Pada saat dataset dipanggil, masih terdapat beberapa kolom data yang belum sesuai tipe datanya. Contohnya kolom Style, Country, dan Stars yang seharusnya menggunakan tipe data factor dikarenakan jumlah nilai unique yang sedikit.
+```{r}
+ramen[,c("Style", "Country", "Stars")] <- lapply(ramen[, c("Style", "Country", "Stars")], as.factor)
+glimpse(ramen)
+head(ramen)
+```
+
+## Check null on Data
+Mengecek apakah terdapat data yang kosong. Jika terdapat data yang kosong, kita dapat melakukan treatment berbeda untuk data kita ini.
+```{r}
+colSums(is.na(ramen))
+```
+## Top 10 Country with Most Ramen Brand
+Menghitung negara apa yang memiliki brand ramen terbanyak. Disini kita melakukan groupby untuk kolom Country, kemudian menggunakan fungsi tally untuk menjumlahkannya. Hasil dari kedua fungsi tersebut akan berupa dataframe yang kemudian kita urutkan dari besar ke kecil menggunakan fungsi arrange.
+```{r}
+ramen10 <- ramen %>% 
+  group_by(Country) %>% 
+  tally %>% 
+  arrange(desc(n)) %>% 
+  slice(1:10)
+
+ramen10
+```
+
+### Organize Theme for Plot
+Tema untuk plot diatur menggunakan theme_algo ini
+```{r}
+theme_algo <- theme(
+  panel.background = element_rect(fill = "white"),
+  panel.grid.major = element_line(colour = "white"),
+  plot.title = element_text(family = "", 
+                            size = 20, 
+                            color = "Black")
+)
+```
+
+### Creating Interactive Plot
+Membuat plot untuk melihat Top 10 Country with Most Ramen Brand.
+```{r}
+p1 <- ramen10 %>% 
+  ggplot(aes(x = n, y = reorder(Country, n),
+             text = glue(
+               "Brand = {n}"
+             ))) +
+  geom_col(fill = "#9D34FE") + 
+  labs(title = "Top 10 Countries with Most Ramen Brands",
+       x = "Total Brand", 
+       y = "") +
+  theme(legend.position = "none") +
+  theme_algo
+
+ggplotly(p1, tooltip = "text")
+```
+
+## 5 Stars Ramen Packaging Style
+Plot ini dibuat untuk melihat packaging apa yang digunakan oleh ramen dengan rating bintang 5. Disini kita melakukan filter dengan ramen yang bintang 5 saja, kemudian melakukan groupby untuk kolom Country.
+```{r}
+ramen5 <- filter(.data = ramen, Stars == "5")
+ramenstyle <- ramen5 %>% 
+  group_by(Country)
+ramenstyle
+```
+
+### Organize Theme for Plot
+Tema untuk plot diatur menggunakan theme_algo ini
+```{r}
+theme_algo2 <- theme(
+  panel.background = element_rect(fill = "White"),
+  panel.grid.major = element_line(colour = "White"),
+  panel.grid.minor = element_blank(),
+  plot.title = element_text(family = "", 
+                            size = 20, 
+                            color = "Black")
+)
+```
+
+### Creating Interactive Plot
+Membuat plot untuk melihat 5 Stars Ramen Packaging Style.
+```{r}
+p2 <- ramenstyle %>% 
+  ggplot(aes(fill = Style, reorder(factor(Style), Style, function(x) -length(x)),
+            text = glue(
+               "Brand = {Brand}"                         
+            ))) +
+  geom_bar(position = "Stack") +
+  theme(legend.position = "none") +
+  labs(title = "5 Stars Ramen Packaging Style",
+       x = "Packaging Style", 
+       y = "Total") +
+  theme_algo2
+
+ggplotly(p2, tooltip = "text")
+```
+
+## Conclusion
+Negara Jepang merupakan negara dengan penghasil brand ramen paling banyak Di dunia. Hal ini terjadi karena ramen sendiri berasal dari negara Jepang yang awalnya ramen tersebut diaptasi dari mie gandum negara China. Kemudian seiring berjalannya waktu, ramen mulai dikembangkan kedalam bentuk instant (instant ramen). Pada tahun 1958 instant ramen diciptakan oleh Momofoku Ando, instant ramen ini hanya dibuat dengan menambahkan air panas saja. Kemudian pada tahun 1980 ramen dan instant ramen sudah menjadi icon negara Jepang karena keunikan dan banyaknya variasi yang dibuat. Hal ini dapat dilihat pada plot kedua dimana ramen dengan bintang 5 pun mempunyai berbagai macam packaging yang berbeda, dimulai dari yang paling banyak adalah pack diikuti bowl, cup, tray, box, dan bar.
